@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import re
-from unittest.mock import patch
+from unittest.mock import Mock, call, patch
 
 import pytest
 
@@ -107,6 +107,22 @@ def test__serialize_data_large_number():
     bus = MockMotorsBus("", {})
     with pytest.raises(ValueError):
         bus._serialize_data(2**32, 4)  # 4-byte max is 0xFFFFFFFF
+
+
+def test_disconnect_continues_after_torque_disable_error(dummy_motors, caplog):
+    bus = MockMotorsBus("/dev/dummy-port", dummy_motors)
+    bus.connect(handshake=False)
+    bus.disable_torque = Mock(side_effect=[None, RuntimeError("overload"), None])
+
+    bus.disconnect()
+
+    assert bus.disable_torque.call_args_list == [
+        call(motors="dummy_1", num_retry=5),
+        call(motors="dummy_2", num_retry=5),
+        call(motors="dummy_3", num_retry=5),
+    ]
+    assert not bus.is_connected
+    assert "continuing cleanup" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -206,9 +222,9 @@ def test_sync_read_by_str(data_name, id_, value, dummy_motors):
         addr,
         length,
         ids,
-        num_retry=0,
+        num_retry=1,
         raise_on_error=True,
-        err_msg=f"Failed to sync read '{data_name}' on {ids=} after 1 tries.",
+        err_msg=f"Failed to sync read '{data_name}' on {ids=} after 2 tries.",
     )
     mock__decode_sign.assert_called_once_with(data_name, {id_: value})
     if data_name in bus.normalized_data:
@@ -243,9 +259,9 @@ def test_sync_read_by_list(data_name, ids_values, dummy_motors):
         addr,
         length,
         ids,
-        num_retry=0,
+        num_retry=1,
         raise_on_error=True,
-        err_msg=f"Failed to sync read '{data_name}' on {ids=} after 1 tries.",
+        err_msg=f"Failed to sync read '{data_name}' on {ids=} after 2 tries.",
     )
     mock__decode_sign.assert_called_once_with(data_name, ids_values)
     if data_name in bus.normalized_data:
@@ -280,9 +296,9 @@ def test_sync_read_by_none(data_name, ids_values, dummy_motors):
         addr,
         length,
         ids,
-        num_retry=0,
+        num_retry=1,
         raise_on_error=True,
-        err_msg=f"Failed to sync read '{data_name}' on {ids=} after 1 tries.",
+        err_msg=f"Failed to sync read '{data_name}' on {ids=} after 2 tries.",
     )
     mock__decode_sign.assert_called_once_with(data_name, ids_values)
     if data_name in bus.normalized_data:
@@ -314,9 +330,9 @@ def test_sync_write_by_single_value(data_name, value, dummy_motors):
         addr,
         length,
         ids_values,
-        num_retry=0,
+        num_retry=1,
         raise_on_error=True,
-        err_msg=f"Failed to sync write '{data_name}' with {ids_values=} after 1 tries.",
+        err_msg=f"Failed to sync write '{data_name}' with {ids_values=} after 2 tries.",
     )
     mock__encode_sign.assert_called_once_with(data_name, ids_values)
     if data_name in bus.normalized_data:
@@ -349,9 +365,9 @@ def test_sync_write_by_value_dict(data_name, ids_values, dummy_motors):
         addr,
         length,
         ids_values,
-        num_retry=0,
+        num_retry=1,
         raise_on_error=True,
-        err_msg=f"Failed to sync write '{data_name}' with {ids_values=} after 1 tries.",
+        err_msg=f"Failed to sync write '{data_name}' with {ids_values=} after 2 tries.",
     )
     mock__encode_sign.assert_called_once_with(data_name, ids_values)
     if data_name in bus.normalized_data:

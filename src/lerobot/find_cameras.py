@@ -46,9 +46,13 @@ from lerobot.cameras.realsense.configuration_realsense import RealSenseCameraCon
 logger = logging.getLogger(__name__)
 
 
-def find_all_opencv_cameras() -> list[dict[str, Any]]:
+def find_all_opencv_cameras(camera_ids: list[int] | None = None) -> list[dict[str, Any]]:
     """
     Finds all available OpenCV cameras plugged into the system.
+
+    Args:
+        camera_ids: Optional camera indices to scan. When omitted, all candidate
+                    camera indices are scanned.
 
     Returns:
         A list of all available OpenCV cameras with their metadata.
@@ -56,7 +60,7 @@ def find_all_opencv_cameras() -> list[dict[str, Any]]:
     all_opencv_cameras_info: list[dict[str, Any]] = []
     logger.info("Searching for OpenCV cameras...")
     try:
-        opencv_cameras = OpenCVCamera.find_cameras()
+        opencv_cameras = OpenCVCamera.find_cameras(camera_ids=camera_ids)
         for cam_info in opencv_cameras:
             all_opencv_cameras_info.append(cam_info)
         logger.info(f"Found {len(opencv_cameras)} OpenCV cameras.")
@@ -88,13 +92,17 @@ def find_all_realsense_cameras() -> list[dict[str, Any]]:
     return all_realsense_cameras_info
 
 
-def find_and_print_cameras(camera_type_filter: str | None = None) -> list[dict[str, Any]]:
+def find_and_print_cameras(
+    camera_type_filter: str | None = None, camera_ids: list[int] | None = None
+) -> list[dict[str, Any]]:
     """
     Finds available cameras based on an optional filter and prints their information.
 
     Args:
         camera_type_filter: Optional string to filter cameras ("realsense" or "opencv").
                             If None, lists all cameras.
+        camera_ids: Optional OpenCV camera indices to include. Cameras with other
+                    indices are neither displayed nor opened.
 
     Returns:
         A list of all available cameras matching the filter, with their metadata.
@@ -105,9 +113,36 @@ def find_and_print_cameras(camera_type_filter: str | None = None) -> list[dict[s
         camera_type_filter = camera_type_filter.lower()
 
     if camera_type_filter is None or camera_type_filter == "opencv":
-        all_cameras_info.extend(find_all_opencv_cameras())
-    if camera_type_filter is None or camera_type_filter == "realsense":
+        all_cameras_info.extend(find_all_opencv_cameras(camera_ids=camera_ids))
+    if camera_ids is None and (camera_type_filter is None or camera_type_filter == "realsense"):
         all_cameras_info.extend(find_all_realsense_cameras())
+
+    if camera_ids is not None:
+        requested_ids = set(camera_ids)
+
+        def get_camera_index(cam_info: dict[str, Any]) -> int | None:
+            camera_id = cam_info.get("id")
+            if isinstance(camera_id, int):
+                return camera_id
+
+            device_name = Path(str(camera_id)).name
+            index = device_name.removeprefix("video")
+            return int(index) if device_name.startswith("video") and index.isdigit() else None
+
+        all_cameras_info = [
+            cam_info
+            for cam_info in all_cameras_info
+            if cam_info.get("type") == "OpenCV" and get_camera_index(cam_info) in requested_ids
+        ]
+
+        found_ids = {
+            camera_index
+            for cam_info in all_cameras_info
+            if (camera_index := get_camera_index(cam_info)) is not None
+        }
+        missing_ids = requested_ids - found_ids
+        if missing_ids:
+            logger.warning(f"Requested OpenCV camera IDs not found: {sorted(missing_ids)}")
 
     if not all_cameras_info:
         if camera_type_filter:
@@ -231,6 +266,7 @@ def save_images_from_all_cameras(
     output_dir: Path,
     record_time_s: float = 2.0,
     camera_type: str | None = None,
+    camera_ids: list[int] | None = None,
 ):
     """
     Connects to detected cameras (optionally filtered by type) and saves images from each.
@@ -241,10 +277,11 @@ def save_images_from_all_cameras(
         record_time_s: Duration in seconds to record images.
         camera_type: Optional string to filter cameras ("realsense" or "opencv").
                             If None, uses all detected cameras.
+        camera_ids: Optional OpenCV camera indices to include. Other cameras are not opened.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Saving images to {output_dir}")
-    all_camera_metadata = find_and_print_cameras(camera_type_filter=camera_type)
+    all_camera_metadata = find_and_print_cameras(camera_type_filter=camera_type, camera_ids=camera_ids)
 
     if not all_camera_metadata:
         logger.warning("No cameras detected matching the criteria. Cannot save images.")
@@ -310,6 +347,13 @@ def main():
         type=float,
         default=6.0,
         help="Time duration to attempt capturing frames. Default: 6 seconds.",
+    )
+    parser.add_argument(
+        "--camera-ids",
+        type=int,
+        nargs="+",
+        default=None,
+        help="Only display and capture the selected OpenCV camera indices (for example: --camera-ids 1 2).",
     )
     args = parser.parse_args()
     save_images_from_all_cameras(**vars(args))

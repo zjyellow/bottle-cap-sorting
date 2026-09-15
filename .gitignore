@@ -173,3 +173,11 @@ outputs/
 
 # Dev folders
 .cache/*
+
+# Local datasets, vendor reference manual, and accidental command output files
+/autodl_bottle_cap_*.tar
+/SO-ARM101开源6轴机械臂使用文档.pdf
+/python
+/lerobot-find-cameras
+.env.*
+!.env.example

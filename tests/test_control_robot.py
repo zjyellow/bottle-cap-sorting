@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from lerobot.calibrate import CalibrateConfig, calibrate
-from lerobot.record import DatasetRecordConfig, RecordConfig, record
+from lerobot.record import DatasetRecordConfig, RecordConfig, record, return_robot_to_position
 from lerobot.replay import DatasetReplayConfig, ReplayConfig, replay
 from lerobot.teleoperate import TeleoperateConfig, teleoperate
 from tests.fixtures.constants import DUMMY_REPO_ID
@@ -38,6 +38,37 @@ def test_teleoperate():
         teleop_time_s=0.1,
     )
     teleoperate(cfg)
+
+
+def test_return_robot_to_position(monkeypatch):
+    class PositionRobot:
+        action_features = {"joint.pos": float}
+
+        def __init__(self):
+            self.actions = []
+
+        def get_observation(self):
+            return {"joint.pos": 10.0}
+
+        def send_action(self, action):
+            self.actions.append(action)
+
+    monkeypatch.setattr("lerobot.record.busy_wait", lambda _: None)
+    robot = PositionRobot()
+
+    return_robot_to_position(robot, {"joint.pos": 0.0}, fps=2, duration_s=1)
+
+    assert robot.actions == [{"joint.pos": 5.0}, {"joint.pos": 0.0}]
+
+    stopped_robot = PositionRobot()
+    return_robot_to_position(
+        stopped_robot,
+        {"joint.pos": 0.0},
+        fps=2,
+        duration_s=1,
+        events={"stop_recording": True},
+    )
+    assert stopped_robot.actions == []
 
 
 def test_record_and_resume(tmp_path):

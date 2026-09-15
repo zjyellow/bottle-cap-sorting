@@ -80,6 +80,7 @@ from lerobot.robots import (  # noqa: F401
     Robot,
     RobotConfig,
     bi_so100_follower,
+    bi_so101_follower,
     hope_jr,
     koch_follower,
     make_robot_from_config,
@@ -90,6 +91,7 @@ from lerobot.teleoperators import (  # noqa: F401
     Teleoperator,
     TeleoperatorConfig,
     bi_so100_leader,
+    bi_so101_leader,
     homunculus,
     koch_leader,
     make_teleoperator_from_config,
@@ -169,6 +171,10 @@ class RecordConfig:
     play_sounds: bool = True
     # Resume recording on an existing dataset.
     resume: bool = False
+    # Return the robot to its position at startup after a normal recording completion.
+    return_to_start: bool = False
+    # Number of seconds used for the smooth return movement.
+    return_to_start_time_s: int | float = 5
 
     def __post_init__(self):
         # HACK: We parse again the cli args here to get the pretrained path if there was one.
@@ -180,6 +186,8 @@ class RecordConfig:
 
         if self.teleop is None and self.policy is None:
             raise ValueError("Choose a policy, a teleoperator or both to control the robot")
+        if self.return_to_start and self.return_to_start_time_s <= 0:
+            raise ValueError("return_to_start_time_s must be greater than zero")
 
     @classmethod
     def __get_path_fields__(cls) -> list[str]:
@@ -284,6 +292,33 @@ def record_loop(
         timestamp = time.perf_counter() - start_episode_t
 
 
+def return_robot_to_position(
+    robot: Robot,
+    target_position: dict[str, float],
+    fps: int,
+    duration_s: int | float,
+    events: dict | None = None,
+) -> None:
+    """Move the robot smoothly from its current position to a target position."""
+    observation = robot.get_observation()
+    current_position = {key: observation[key] for key in robot.action_features}
+    num_steps = max(1, round(duration_s * fps))
+
+    for step in range(1, num_steps + 1):
+        if events is not None and events["stop_recording"]:
+            logging.warning("Robot return movement interrupted by stop request.")
+            break
+        start_loop_t = time.perf_counter()
+        progress = step / num_steps
+        smooth_progress = progress * progress * (3 - 2 * progress)
+        action = {
+            key: current_position[key] + (target_position[key] - current_position[key]) * smooth_progress
+            for key in robot.action_features
+        }
+        robot.send_action(action)
+        busy_wait(1 / fps - (time.perf_counter() - start_loop_t))
+
+
 @parser.wrap()
 def record(cfg: RecordConfig) -> LeRobotDataset:
     init_logging()
@@ -333,6 +368,11 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
     if teleop is not None:
         teleop.connect()
 
+    start_position = None
+    if cfg.return_to_start:
+        start_observation = robot.get_observation()
+        start_position = {key: start_observation[key] for key in robot.action_features}
+
     listener, events = init_keyboard_listener()
 
     with VideoEncodingManager(dataset):
@@ -378,6 +418,10 @@ def record(cfg: RecordConfig) -> LeRobotDataset:
             recorded_episodes += 1
 
     log_say("Stop recording", cfg.play_sounds, blocking=True)
+
+    if cfg.return_to_start and not events["stop_recording"]:
+        log_say("Returning robot to start position", cfg.play_sounds)
+        return_robot_to_position(robot, start_position, cfg.dataset.fps, cfg.return_to_start_time_s, events)
 
     robot.disconnect()
     if teleop is not None:

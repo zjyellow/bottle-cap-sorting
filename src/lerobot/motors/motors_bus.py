@@ -469,7 +469,14 @@ class MotorsBus(abc.ABC):
         if disable_torque:
             self.port_handler.clearPort()
             self.port_handler.is_using = False
-            self.disable_torque(num_retry=5)
+            for motor in self.motors:
+                try:
+                    self.disable_torque(motors=motor, num_retry=5)
+                except (ConnectionError, RuntimeError) as error:
+                    logger.warning(
+                        f"Failed to disable torque on motor '{motor}' while disconnecting; continuing cleanup. "
+                        f"{error}"
+                    )
 
         self.port_handler.closePort()
         logger.debug(f"{self.__class__.__name__} disconnected.")
@@ -1056,7 +1063,7 @@ class MotorsBus(abc.ABC):
         motors: str | list[str] | None = None,
         *,
         normalize: bool = True,
-        num_retry: int = 0,
+        num_retry: int = 1,
     ) -> dict[str, Value]:
         """Read the same register from several motors at once.
 
@@ -1104,7 +1111,7 @@ class MotorsBus(abc.ABC):
         length: int,
         motor_ids: list[int],
         *,
-        num_retry: int = 0,
+        num_retry: int = 1,
         raise_on_error: bool = True,
         err_msg: str = "",
     ) -> tuple[dict[int, int], int]:
@@ -1113,7 +1120,7 @@ class MotorsBus(abc.ABC):
             comm = self.sync_reader.txRxPacket()
             if self._is_comm_success(comm):
                 break
-            logger.debug(
+            logger.info(
                 f"Failed to sync read @{addr=} ({length=}) on {motor_ids=} ({n_try=}): "
                 + self.packet_handler.getTxRxResult(comm)
             )
@@ -1151,7 +1158,7 @@ class MotorsBus(abc.ABC):
         values: Value | dict[str, Value],
         *,
         normalize: bool = True,
-        num_retry: int = 0,
+        num_retry: int = 1,
     ) -> None:
         """Write the same register on multiple motors.
 
@@ -1192,7 +1199,7 @@ class MotorsBus(abc.ABC):
         addr: int,
         length: int,
         ids_values: dict[int, int],
-        num_retry: int = 0,
+        num_retry: int = 1,
         raise_on_error: bool = True,
         err_msg: str = "",
     ) -> int:
@@ -1201,7 +1208,7 @@ class MotorsBus(abc.ABC):
             comm = self.sync_writer.txPacket()
             if self._is_comm_success(comm):
                 break
-            logger.debug(
+            logger.info(
                 f"Failed to sync write @{addr=} ({length=}) with {ids_values=} ({n_try=}): "
                 + self.packet_handler.getTxRxResult(comm)
             )

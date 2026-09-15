@@ -1,3 +1,49 @@
+# Bottle Cap Sorting — 瓶盖分拣
+
+本项目基于 [Hugging Face LeRobot](https://github.com/huggingface/lerobot)，保留上游 Git 历史、版权声明及 [Apache-2.0 许可证](LICENSE)。本地扩展基于上游提交 `882c80d4`，主要面向 SO-101 机械臂在 Windows 上的数据采集、ACT 训练和实机评估。
+
+## 本项目的扩展
+
+- SO-101 双臂 follower / leader 支持，并接入校准、遥操作、录制和回放入口。
+- Windows OpenCV 相机适配，可通过 `--camera-ids` 指定扫描的相机。
+- Windows 策略配置加载适配、电机通信及动作限幅修正。
+- 可选的录制结束后平滑回到起始位置功能。
+- 瓶盖任务的采集、数据集合并、AutoDL 训练、训练日志分析和 ACT 评估脚本。
+
+## 安装与使用
+
+使用 Python 3.10 或 3.11 环境，在仓库根目录安装：
+
+```powershell
+python -m pip install -e ".[feetech]"
+```
+
+Windows 用户先激活安装 LeRobot 的 Python 环境，再运行脚本。根据自己的设备修改脚本中的串口、机械臂 ID、相机索引和模型路径。默认 follower 为 `COM3`、leader 为 `COM4`；采集与评估脚本的相机索引不同，需要分别核对。机械臂应先完成电机配置和校准。
+
+```powershell
+# 遥操作
+.\teleoperate_test.ps1
+
+# 采集示范，结果写入 outputs/datasets/
+.\record_demo.ps1 --name bottle_cap_white_v1 --task "Grab the white bottle cap"
+
+# 使用本地训练权重进行实机评估
+.\evaluate_act.ps1 --color white --checkpoint 100000 --num-episodes 1 --episode-time-s 15
+```
+
+| 脚本 | 用途 |
+| --- | --- |
+| `merge_bottle_cap_datasets.py` | 合并本地数据集；使用 `--help` 查看参数 |
+| `autodl_prepare_green_white.sh` | 在 AutoDL 环境解包绿色、白色瓶盖数据并启动训练 |
+| `autodl_train_green_white_runner.sh` | 顺序运行两组 ACT 训练，各训练 100,000 步 |
+| `analyze_act_training_log.py` | 从训练日志导出指标表和曲线；使用 `--help` 查看参数 |
+
+AutoDL 脚本使用 `/root/autodl-tmp` 和 `/root/miniconda3` 路径，需要按服务器环境调整。数据集压缩包、模型权重、训练输出、日志及本地厂商 PDF 手册不随代码发布，运行训练和评估前需要自行准备对应数据及权重。
+
+以下为保留的上游项目介绍；其中徽章和社区链接指向 Hugging Face 上游项目。
+
+---
+
 <p align="center">
   <img alt="LeRobot, Hugging Face Robotics Library" src="https://raw.githubusercontent.com/huggingface/lerobot/main/media/lerobot-logo-thumbnail.png" width="100%">
   <br/>

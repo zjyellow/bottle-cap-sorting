@@ -244,12 +244,16 @@ class OpenCVCamera(Camera):
             )
 
     @staticmethod
-    def find_cameras() -> list[dict[str, Any]]:
+    def find_cameras(camera_ids: list[int] | None = None) -> list[dict[str, Any]]:
         """
         Detects available OpenCV cameras connected to the system.
 
         On Linux, it scans '/dev/video*' paths. On other systems (like macOS, Windows),
         it checks indices from 0 up to `MAX_OPENCV_INDEX`.
+
+        Args:
+            camera_ids: Optional camera indices to scan. When omitted, all candidate
+                camera indices are scanned.
 
         Returns:
             List[Dict[str, Any]]: A list of dictionaries,
@@ -260,9 +264,13 @@ class OpenCVCamera(Camera):
 
         if platform.system() == "Linux":
             possible_paths = sorted(Path("/dev").glob("video*"), key=lambda p: p.name)
-            targets_to_scan = [str(p) for p in possible_paths]
+            if camera_ids is None:
+                targets_to_scan = [str(p) for p in possible_paths]
+            else:
+                requested_paths = {str(Path("/dev") / f"video{camera_id}") for camera_id in camera_ids}
+                targets_to_scan = [str(p) for p in possible_paths if str(p) in requested_paths]
         else:
-            targets_to_scan = list(range(MAX_OPENCV_INDEX))
+            targets_to_scan = camera_ids if camera_ids is not None else list(range(MAX_OPENCV_INDEX))
 
         for target in targets_to_scan:
             camera = cv2.VideoCapture(target)
