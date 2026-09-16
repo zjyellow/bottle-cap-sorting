@@ -31,12 +31,12 @@ Windows 用户先激活安装 LeRobot 的 Python 环境，再运行脚本。根�
 .\evaluate_act.ps1 --color white --checkpoint 100000 --num-episodes 1 --episode-time-s 15
 ```
 
-| 脚本 | 用途 |
-| --- | --- |
-| `merge_bottle_cap_datasets.py` | 合并本地数据集；使用 `--help` 查看参数 |
-| `autodl_prepare_green_white.sh` | 在 AutoDL 环境解包绿色、白色瓶盖数据并启动训练 |
-| `autodl_train_green_white_runner.sh` | 顺序运行两组 ACT 训练，各训练 100,000 步 |
-| `analyze_act_training_log.py` | 从训练日志导出指标表和曲线；使用 `--help` 查看参数 |
+| 脚本                                 | 用途                                               |
+| ------------------------------------ | -------------------------------------------------- |
+| `merge_bottle_cap_datasets.py`       | 合并本地数据集；使用 `--help` 查看参数             |
+| `autodl_prepare_green_white.sh`      | 在 AutoDL 环境解包绿色、白色瓶盖数据并启动训练     |
+| `autodl_train_green_white_runner.sh` | 顺序运行两组 ACT 训练，各训练 100,000 步           |
+| `analyze_act_training_log.py`        | 从训练日志导出指标表和曲线；使用 `--help` 查看参数 |
 
 AutoDL 脚本使用 `/root/autodl-tmp` 和 `/root/miniconda3` 路径，需要按服务器环境调整。数据集压缩包、模型权重、训练输出、日志及本地厂商 PDF 手册不随代码发布，运行训练和评估前需要自行准备对应数据及权重。
 

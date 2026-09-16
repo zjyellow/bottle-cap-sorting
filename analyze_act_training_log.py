@@ -7,7 +7,6 @@ import csv
 import re
 from pathlib import Path
 
-
 METRIC_RE = re.compile(
     r"INFO (?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*?"
     r"step:(?P<display_step>\S+) smpl:(?P<samples>\S+) ep:(?P<episodes>\S+) "

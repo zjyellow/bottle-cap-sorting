@@ -7,7 +7,6 @@ from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-
 WORKSPACE = Path(__file__).resolve().parent
 DATASETS = WORKSPACE / "outputs" / "datasets"
 
@@ -72,8 +71,7 @@ for source_root, selected_episodes in SOURCES:
     info = read_json(source_root / "meta" / "info.json")
     episodes = {item["episode_index"]: item for item in read_jsonl(source_root / "meta" / "episodes.jsonl")}
     stats = {
-        item["episode_index"]: item
-        for item in read_jsonl(source_root / "meta" / "episodes_stats.jsonl")
+        item["episode_index"]: item for item in read_jsonl(source_root / "meta" / "episodes_stats.jsonl")
     }
     selected_episodes = list(selected_episodes)
     missing = [episode for episode in selected_episodes if episode not in episodes or episode not in stats]
@@ -92,9 +90,7 @@ merged_episodes = []
 merged_stats = []
 global_frame_index = 0
 new_episode_index = 0
-video_keys = [
-    key for key, feature in reference_info["features"].items() if feature["dtype"] == "video"
-]
+video_keys = [key for key, feature in reference_info["features"].items() if feature["dtype"] == "video"]
 chunks_size = reference_info["chunks_size"]
 
 for source_root, selected_episodes, info, episodes, stats in source_metadata:
@@ -115,7 +111,9 @@ for source_root, selected_episodes, info, episodes, stats in source_metadata:
             range(global_frame_index, global_frame_index + episode_length), type=pa.int64()
         )
         task_column = pa.array([0] * episode_length, type=pa.int64())
-        table = table.set_column(table.schema.get_field_index("episode_index"), "episode_index", episode_column)
+        table = table.set_column(
+            table.schema.get_field_index("episode_index"), "episode_index", episode_column
+        )
         table = table.set_column(table.schema.get_field_index("index"), "index", index_column)
         table = table.set_column(table.schema.get_field_index("task_index"), "task_index", task_column)
 
