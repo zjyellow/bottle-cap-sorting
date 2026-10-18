@@ -1,0 +1,44 @@
+* { box-sizing: border-box; }
+:root { color-scheme: light; }
+body {
+  margin: 0;
+  background: #fff;
+  color: #363636;
+  font-family: "Helvetica Neue", Arial, "Microsoft YaHei", "PingFang SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: #3273bd; text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible, summary:focus-visible, video:focus-visible { outline: 2px solid #3273bd; outline-offset: 5px; }
+.project-header { max-width: 1000px; margin: 0 auto; padding: 63px 24px 53px; text-align: center; }
+h1 { margin: 0; font-size: 46px; font-weight: 600; line-height: 1.2; letter-spacing: -1.5px; }
+h1 span { display: block; margin-top: 15px; font-size: 26px; font-weight: 400; letter-spacing: 2px; }
+.author { margin: 23px 0 0; font-size: 20px; line-height: 1.5; }
+.experiments { width: calc(100% - 64px); max-width: 1000px; margin: 0 auto; padding-bottom: 48px; }
+.color-section { padding: 32px 0 34px; border-top: 1px solid #e8e8e8; }
+h2 { margin: 0 0 24px; font-size: 25px; font-weight: 500; text-align: center; line-height: 1.5; }
+h2 span { display: block; margin-top: 5px; color: #888; font-size: 15px; font-weight: 400; }
+.video-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+.experiment { margin: 0; min-width: 0; }
+video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #161616; object-fit: contain; border-radius: 2px; }
+figcaption { display: flex; justify-content: center; align-items: center; gap: 9px; margin-top: 12px; font-size: 17px; line-height: 1.5; }
+figcaption span { color: #8a8a8a; font-size: 12px; }
+.screen-recordings { margin-top: 22px; }
+summary { width: fit-content; margin: 0 auto; padding: 5px 3px; cursor: pointer; color: #777; font-size: 12px; line-height: 1.8; }
+summary span { color: #999; font-size: 11px; margin-left: 4px; }
+.screen-recordings[open] .video-grid { margin-top: 19px; }
+@media (max-width: 640px) {
+  .project-header { padding: 43px 20px 36px; }
+  h1 { font-size: 34px; letter-spacing: -1px; }
+  h1 span { margin-top: 12px; font-size: 22px; letter-spacing: 1px; }
+  .author { margin-top: 20px; font-size: 18px; }
+  .experiments { width: calc(100% - 36px); padding-bottom: 20px; }
+  .color-section { padding: 27px 0 30px; }
+  h2 { font-size: 22px; margin-bottom: 20px; }
+  h2 span { font-size: 13px; }
+  .video-grid { grid-template-columns: 1fr; gap: 25px; }
+  figcaption { margin-top: 9px; font-size: 16px; }
+  .screen-recordings { margin-top: 20px; }
+  summary { font-size: 11px; }
+  summary span { font-size: 10px; }
+}
